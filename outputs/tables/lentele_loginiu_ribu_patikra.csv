@@ -1,0 +1,8 @@
+,Pažeidimų skaičius
+Šviesumas ne intervale [0; 255],0
+Minimum_of_Luminosity > Maximum_of_Luminosity,0
+Length_of_Conveyer <= 0 arba Steel_Plate_Thickness <= 0,0
+Edges_Index < 0 arba > 1,6
+Empty_Index < 0 arba > 1,0
+Square_Index <= 0 arba > 1,0
+Outside_X_Index <= 0 arba > 1,0

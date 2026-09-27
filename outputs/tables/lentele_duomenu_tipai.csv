@@ -1,0 +1,9 @@
+,Duomenų tipas
+Minimum_of_Luminosity,int64
+Maximum_of_Luminosity,int64
+Length_of_Conveyer,int64
+Steel_Plate_Thickness,str
+Edges_Index,float64
+Empty_Index,str
+Square_Index,float64
+Outside_X_Index,float64

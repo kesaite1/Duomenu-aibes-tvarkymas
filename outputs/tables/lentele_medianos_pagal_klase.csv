@@ -1,0 +1,8 @@
+class,Minimum_of_Luminosity,Maximum_of_Luminosity,Length_of_Conveyer,Steel_Plate_Thickness,Edges_Index,Empty_Index,Square_Index,Outside_X_Index
+Bumps,91.0,127.0,1624.0,70.0,0.447,0.333,0.75,0.008
+Dirtiness,107.5,132.5,1364.0,100.0,0.618,0.399,0.189,0.007
+K_Scratch,41.0,134.0,1362.0,40.0,0.059,0.456,0.464,0.112
+Other_Faults,97.0,127.0,1372.0,70.0,0.321,0.423,0.533,0.01
+Pastry,80.0,126.0,1648.0,80.0,0.149,0.32,0.333,0.007
+Stains,115.0,140.0,1358.0,50.0,0.59,0.417,0.714,0.004
+Z_Scratch,93.0,124.0,1356.0,70.0,0.148,0.459,0.583,0.011

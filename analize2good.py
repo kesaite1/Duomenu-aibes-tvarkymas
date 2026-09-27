@@ -1,3 +1,12 @@
+
+"""
+1 laboratorinis darbas - mano dalis: stulpeliai I-P
+(Minimum_of_Luminosity ... Outside_X_Index)
+ 
+Paleidimas (terminale, su aktyvuota .venv):   python analize.py
+Failas analize.py turi būti šalia A24.csv. Originalus A24.csv niekada nekeičiamas.
+Rezultatai: outputs/tables (lentelės), outputs/figures (grafikai), data/processed (sutvarkyti duomenys)
+"""
 from pathlib import Path
  
 import numpy as np
@@ -153,9 +162,9 @@ print(outliers)
 outliers.to_csv(TAB_DIR / "lentele_isskirtys_iqr.csv")
  
 # ---------------------------------------------------------------------------
-# 7. APRAŠOMOJI STATISTIKA (PRIEŠ VALYMĄ)
+# 7. APRAŠOMOJI STATISTIKA
 # ---------------------------------------------------------------------------
-title("7. Aprašomoji statistika (prieš valymą)")
+title("7. Aprašomoji statistika")
 stats = df[MY_COLS].describe().T
 stats["skewness"] = df[MY_COLS].skew()
 stats["dispersija"] = df[MY_COLS].var()
@@ -167,10 +176,75 @@ print("\nMedianos pagal klasę:\n", by_class)
 by_class.to_csv(TAB_DIR / "lentele_medianos_pagal_klase.csv")
  
 # ---------------------------------------------------------------------------
-# 8. VALYMAS (eilučių nešaliname - tik taisome reikšmes)
-#    PERKELTA PRIEŠ GRAFIKUS, kad grafikus galėtume piešti ir prieš, ir po.
+# 8. GRAFIKAI
 # ---------------------------------------------------------------------------
-title("8. Duomenų valymas")
+title("8. Grafikai")
+classes = sorted(df["class"].unique())
+color_of = dict(zip(classes, CLASS_COLORS))
+ 
+# 8a) Klasių pasiskirstymas
+counts = df["class"].value_counts().sort_values()
+fig, ax = plt.subplots(figsize=(7, 4))
+bars = ax.barh(counts.index, counts.values, color=[color_of[c] for c in counts.index])
+ax.bar_label(bars, padding=3)
+ax.set_title("Objektų pasiskirstymas pagal defekto klasę")
+ax.set_xlabel("Objektų skaičius")
+ax.grid(axis="y", visible=False)
+save(fig, "klasiu_pasiskirstymas.png")
+ 
+# 8b) Histogramos su mediana
+fig, axes = plt.subplots(2, 4, figsize=(16, 7))
+for ax, col in zip(axes.ravel(), MY_COLS):
+    s = df[col].dropna()
+    ax.hist(s, bins=30, color=BLUE, edgecolor="white", alpha=0.9)
+    ax.axvline(s.median(), color=RED, ls="--", lw=1.6, label=f"mediana = {s.median():.4g}")
+    ax.set_title(col)
+    ax.set_xlabel("Reikšmė")
+    ax.set_ylabel("Dažnis")
+    ax.legend(frameon=False, fontsize=8)
+fig.suptitle("Požymių pasiskirstymas (prieš valymą)", fontsize=14, fontweight="bold")
+fig.tight_layout()
+save(fig, "histogramos_pries.png")
+ 
+# 8c) Stačiakampės diagramos pagal klasę
+fig, axes = plt.subplots(2, 4, figsize=(18, 8))
+for ax, col in zip(axes.ravel(), MY_COLS):
+    data = [df.loc[df["class"] == c, col].dropna() for c in classes]
+    bp = ax.boxplot(data, patch_artist=True, widths=0.6,
+                    medianprops=dict(color="black", lw=1.5),
+                    flierprops=dict(marker="o", markersize=3, alpha=0.4, markeredgecolor=GREY))
+    for patch, c in zip(bp["boxes"], classes):
+        patch.set_facecolor(color_of[c])
+        patch.set_alpha(0.85)
+    ax.set_xticklabels(classes, rotation=45, ha="right")
+    ax.set_title(col)
+fig.suptitle("Požymių reikšmės pagal defekto klasę", fontsize=14, fontweight="bold")
+fig.tight_layout()
+save(fig, "boxplot_pagal_klase.png")
+ 
+# 8d) Spearman koreliacijos
+corr = df[MY_COLS].corr(method="spearman")
+fig, ax = plt.subplots(figsize=(8.5, 7))
+im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1)
+ax.set_xticks(range(len(MY_COLS)), MY_COLS, rotation=45, ha="right")
+ax.set_yticks(range(len(MY_COLS)), MY_COLS)
+for i in range(len(MY_COLS)):
+    for j in range(len(MY_COLS)):
+        v = corr.iloc[i, j]
+        ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=8.5,
+                color="white" if abs(v) > 0.6 else "#111827")
+ax.grid(False)
+fig.colorbar(im, ax=ax, label="Spearman koreliacija", shrink=0.85)
+ax.set_title("Požymių Spearman koreliacijos")
+fig.tight_layout()
+save(fig, "koreliacijos.png")
+corr.round(3).to_csv(TAB_DIR / "lentele_koreliacijos_spearman.csv")
+print("Grafikai įrašyti į", FIG_DIR)
+ 
+# ---------------------------------------------------------------------------
+# 9. VALYMAS (eilučių nešaliname - tik taisome reikšmes)
+# ---------------------------------------------------------------------------
+title("9. Duomenų valymas")
 clean = df.copy()
 log = {}
  
@@ -202,91 +276,22 @@ out = clean[MY_COLS + ["class"]].copy()
 out.index.name = "row_id"                                        # sujungimui su kolegų dalimis
 out.to_csv(PROC_DIR / "A24_I_P_clean.csv")
  
-# ---------------------------------------------------------------------------
-# 9. GRAFIKAI - kiekvienas svarbus grafikas daromas DU KARTUS:
-#    su 'df' (prieš valymą) ir su 'clean' (po valymo), kad būtų matomas skirtumas.
-# ---------------------------------------------------------------------------
-title("9. Grafikai")
-classes = sorted(df["class"].unique())
-color_of = dict(zip(classes, CLASS_COLORS))
- 
-# 9a) Klasių pasiskirstymas (nekinta valant, nes eilučių nešaliname - vienas grafikas užtenka)
-counts = df["class"].value_counts().sort_values()
-fig, ax = plt.subplots(figsize=(7, 4))
-bars = ax.barh(counts.index, counts.values, color=[color_of[c] for c in counts.index])
-ax.bar_label(bars, padding=3)
-ax.set_title("Objektų pasiskirstymas pagal defekto klasę")
-ax.set_xlabel("Objektų skaičius")
-ax.grid(axis="y", visible=False)
-save(fig, "klasiu_pasiskirstymas.png")
- 
- 
-def plot_histograms(data, suffix, subtitle):
-    """Histogramos su mediana visiems 8 požymiams."""
-    fig, axes = plt.subplots(2, 4, figsize=(16, 7))
-    for ax, col in zip(axes.ravel(), MY_COLS):
-        s = data[col].dropna()
-        ax.hist(s, bins=30, color=BLUE if suffix == "pries" else TEAL, edgecolor="white", alpha=0.9)
-        ax.axvline(s.median(), color=RED, ls="--", lw=1.6, label=f"mediana = {s.median():.4g}")
-        ax.set_title(col)
+# Prieš / po grafikas
+fig, axes = plt.subplots(2, 2, figsize=(11, 7))
+for row, col in enumerate(["Edges_Index", "Empty_Index"]):
+    bins = np.linspace(0, df[col].max(), 30)
+    for k, (data, label, color) in enumerate([(df, "prieš valymą", BLUE), (clean, "po valymo", TEAL)]):
+        ax = axes[row, k]
+        ax.hist(data[col].dropna(), bins=bins, color=color, edgecolor="white")
+        ax.set_title(f"{col} - {label}")
         ax.set_xlabel("Reikšmė")
         ax.set_ylabel("Dažnis")
-        ax.legend(frameon=False, fontsize=8)
-    fig.suptitle(f"Požymių pasiskirstymas ({subtitle})", fontsize=14, fontweight="bold")
-    fig.tight_layout()
-    save(fig, f"histogramos_{suffix}.png")
- 
- 
-def plot_boxplots(data, suffix, subtitle):
-    """Stačiakampės diagramos pagal klasę."""
-    fig, axes = plt.subplots(2, 4, figsize=(18, 8))
-    for ax, col in zip(axes.ravel(), MY_COLS):
-        vals = [data.loc[data["class"] == c, col].dropna() for c in classes]
-        bp = ax.boxplot(vals, patch_artist=True, widths=0.6,
-                        medianprops=dict(color="black", lw=1.5),
-                        flierprops=dict(marker="o", markersize=3, alpha=0.4, markeredgecolor=GREY))
-        for patch, c in zip(bp["boxes"], classes):
-            patch.set_facecolor(color_of[c])
-            patch.set_alpha(0.85)
-        ax.set_xticklabels(classes, rotation=45, ha="right")
-        ax.set_title(col)
-    fig.suptitle(f"Požymių reikšmės pagal defekto klasę ({subtitle})", fontsize=14, fontweight="bold")
-    fig.tight_layout()
-    save(fig, f"boxplot_pagal_klase_{suffix}.png")
- 
- 
-def plot_correlations(data, suffix, subtitle):
-    """Spearman koreliacijų matrica."""
-    corr = data[MY_COLS].corr(method="spearman")
-    fig, ax = plt.subplots(figsize=(8.5, 7))
-    im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1)
-    ax.set_xticks(range(len(MY_COLS)), MY_COLS, rotation=45, ha="right")
-    ax.set_yticks(range(len(MY_COLS)), MY_COLS)
-    for i in range(len(MY_COLS)):
-        for j in range(len(MY_COLS)):
-            v = corr.iloc[i, j]
-            ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=8.5,
-                    color="white" if abs(v) > 0.6 else "#111827")
-    ax.grid(False)
-    fig.colorbar(im, ax=ax, label="Spearman koreliacija", shrink=0.85)
-    ax.set_title(f"Požymių Spearman koreliacijos ({subtitle})")
-    fig.tight_layout()
-    save(fig, f"koreliacijos_{suffix}.png")
-    corr.round(3).to_csv(TAB_DIR / f"lentele_koreliacijos_spearman_{suffix}.csv")
-    return corr
- 
- 
-# --- PRIEŠ valymą ---
-plot_histograms(df, "pries", "prieš valymą")
-plot_boxplots(df, "pries", "prieš valymą")
-plot_correlations(df, "pries", "prieš valymą")
- 
-# --- PO valymo ---
-plot_histograms(clean, "po", "po valymo")
-plot_boxplots(clean, "po", "po valymo")
-plot_correlations(clean, "po", "po valymo")
- 
-print("Grafikai (prieš ir po) įrašyti į", FIG_DIR)
+        if col == "Edges_Index":
+            ax.axvline(1, color=RED, ls="--", lw=1.2, label="viršutinė riba = 1")
+            ax.legend(frameon=False, fontsize=8)
+fig.suptitle("Apdorojimo poveikis požymių pasiskirstymui", fontsize=14, fontweight="bold")
+fig.tight_layout()
+save(fig, "pries_po.png")
  
 # ---------------------------------------------------------------------------
 # 10. PALYGINAMASIS EKSPERIMENTAS: Edges_Index užpildymo būdai
@@ -334,3 +339,4 @@ fig.tight_layout()
 save(fig, "eksperimentas_edges_index.png")
  
 print("\nBaigta. Lentelės:", TAB_DIR, "| grafikai:", FIG_DIR)
+ 
